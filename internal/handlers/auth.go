@@ -1,81 +1,69 @@
 package handlers
 
 import (
-	"fmt"
 	"html/template"
-	"log"
 	"net/http"
+	"time"
 
-	"sycinema/internal/repository" // Импортируем наш репозиторий
+	"sycinema/internal/repository"
+	"sycinema/internal/service"
 )
 
-// RegisterPageHandler просто отдает HTML страницу с формой (метод GET)
 func RegisterPageHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("web/templates/register.html")
-	if err != nil {
-		http.Error(w, "Ошибка загрузки страницы", http.StatusInternalServerError)
-		return
-	}
+	tmpl, _ := template.ParseFiles("web/templates/register.html")
 	tmpl.Execute(w, nil)
 }
 
-// RegisterPostHandler принимает данные из формы и сохраняет юзера (метод POST)
-func RegisterPostHandler(w http.ResponseWriter, r *http.Request) {
-	// 1. Просим Go распарсить данные из HTML-формы
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, "Ошибка чтения данных формы", http.StatusBadRequest)
-		return
-	}
-
-	// 2. Достаем значения по их атрибуту name="" из HTML
-	username := r.FormValue("username")
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	// 3. Вызываем нашу функцию из репозитория
-	err = repository.CreateUser(username, email, password)
-	if err != nil {
-		log.Println("Ошибка регистрации:", err)
-		http.Error(w, "Ошибка при регистрации (возможно, email уже занят)", http.StatusInternalServerError)
-		return
-	}
-
-	// 4. Если всё успешно, отправляем простой текст (позже заменим на редирект)
-	fmt.Fprintf(w, "✅ Пользователь %s успешно зарегистрирован!", username)
-}
-
-// LoginPageHandler отдает HTML форму логина
 func LoginPageHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("web/templates/login.html")
-	if err != nil {
-		http.Error(w, "Ошибка загрузки страницы", http.StatusInternalServerError)
-		return
-	}
+	tmpl, _ := template.ParseFiles("web/templates/login.html")
 	tmpl.Execute(w, nil)
 }
 
-// LoginPostHandler обрабатывает попытку входа
+func RegisterPostHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	err := repository.CreateUser(r.FormValue("username"), r.FormValue("email"), r.FormValue("password"))
+	if err != nil {
+		http.Error(w, "Ошибка регистрации", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
+}
+
 func LoginPostHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	r.ParseForm()
+	
+	// 1. Получаем ID и Username из базы
+	id, username, err := repository.AuthenticateUser(r.FormValue("email"), r.FormValue("password"))
 	if err != nil {
-		http.Error(w, "Ошибка чтения формы", http.StatusBadRequest)
+		http.Error(w, "Неверный логин или пароль", http.StatusUnauthorized)
 		return
 	}
 
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	// Проверяем пользователя через нашу новую функцию БД
-	username, err := repository.AuthenticateUser(email, password)
+	// 2. Обязательно передаем полученный ID в токен!
+	tokenString, err := service.GenerateToken(id, username)
 	if err != nil {
-		// Если пароль не подошел — ругаемся
-		http.Error(w, "❌ Неверный email или пароль", http.StatusUnauthorized)
+		http.Error(w, "Ошибка генерации токена", http.StatusInternalServerError)
 		return
 	}
 
-	// Если авторизация успешна:
-	// Позже мы будем выдавать здесь JWT-токен (куки), чтобы сайт "запомнил" пользователя.
-	// А пока просто радуемся успеху!
-	fmt.Fprintf(w, "✅ Добро пожаловать обратно, %s!", username)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    tokenString,
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
+		Path:     "/",
+	})
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Expires:  time.Now().Add(-1 * time.Hour),
+		HttpOnly: true,
+		Path:     "/",
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

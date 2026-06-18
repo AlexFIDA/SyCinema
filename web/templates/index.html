@@ -2,34 +2,48 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SyCinema | Онлайн-кинотеатр</title>
+    <title>SyCinema | Мультсериалы</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <header class="header">
-        <div class="logo">🎬 SyCinema</div>
-        <nav>
-            <a href="/login" class="btn-login">Вход</a>
-            <a href="/register" class="btn-register">Регистрация</a>
+        <div class="logo"><a href="/" style="color: inherit; text-decoration: none;">🍿 SyCinema</a></div>
+        <nav style="display: flex; gap: 15px; align-items: center;">
+            {{ if .Username }}
+                <a href="/bookmarks" style="color: white; text-decoration: none; margin-right: 15px;">Мои закладки</a>
+                <span style="color: #aaa;">Привет, <strong style="color: white;">{{ .Username }}</strong>!</span>
+                <form action="/logout" method="GET" style="margin: 0;">
+                    <button type="submit" class="btn-login">Выйти</button>
+                </form>
+            {{ else }}
+                <form action="/login" method="GET" style="margin: 0;">
+                    <button type="submit" class="btn-login">Войти</button>
+                </form>
+                <form action="/register" method="GET" style="margin: 0;">
+                    <button type="submit" class="btn-register">Регистрация</button>
+                </form>
+            {{ end }}
         </nav>
     </header>
 
-    <main class="container">
-        <section class="hero">
-            <h1>Смотри фильмы вместе с друзьями</h1>
-            <p>Выбирай кино, создавай комнату и наслаждайся синхронным просмотром.</p>
-        </section>
-
-        <h2>Доступные фильмы</h2>
-        <div class="movies-grid">
-            <div class="movie-card">
-                <div class="movie-poster">🎥</div>
-                <div class="movie-info">
-                    <h3>Тестовый фильм</h3>
-                    <a href="/media/test_movie.mp4" target="_blank" class="btn-watch">Смотреть</a>
+    <main style="padding: 40px; text-align: center;">
+        <h1>Смотри любимые мультсериалы</h1>
+        <p style="color: #aaa;">Бесплатно, без рекламы и в отличном качестве.</p>
+        
+        <div class="series-grid" style="margin-top: 40px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+            {{ range .Series }}
+            <a href="/series?id={{ .ID }}" style="text-decoration: none; color: inherit;">
+                <div class="series-card" style="width: 200px; background: #222; border-radius: 8px; overflow: hidden; transition: transform 0.2s;">
+                    <img src="{{ .PosterURL }}" alt="{{ .Title }}" style="width: 100%; height: 280px; object-fit: cover; background-color: #333;">
+                    <div style="padding: 15px;">
+                        <h3 style="margin: 0; font-size: 16px;">{{ .Title }}</h3>
+                        <p style="color: #888; font-size: 12px; margin-top: 5px;">{{ .ReleaseYear }}</p>
+                    </div>
                 </div>
-            </div>
+            </a>
+            {{ else }}
+                <p style="color: #888;">Сериалы пока не добавлены.</p>
+            {{ end }}
         </div>
     </main>
 </body>

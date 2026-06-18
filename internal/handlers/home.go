@@ -2,23 +2,34 @@ package handlers
 
 import (
 	"html/template"
-	"log"
 	"net/http"
+
+	"sycinema/internal/models"
+	"sycinema/internal/repository"
+	"sycinema/internal/service"
 )
 
-// HomeHandler обрабатывает запросы к главной странице
+type HomeData struct {
+	Username string
+	Series   []models.Series
+}
+
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	// Парсим наш HTML файл
+	data := HomeData{}
+
+	if cookie, err := r.Cookie("token"); err == nil {
+		if claims, err := service.ParseToken(cookie.Value); err == nil {
+			data.Username = claims.Username
+		}
+	}
+
+	data.Series, _ = repository.GetAllSeries() // Игнорируем ошибку для краткости, в проде лучше логгировать
+
 	tmpl, err := template.ParseFiles("web/templates/index.html")
 	if err != nil {
-		log.Println("Ошибка загрузки шаблона:", err)
-		http.Error(w, "Внутренняя ошибка сервера", http.StatusInternalServerError)
+		http.Error(w, "Ошибка сервера", http.StatusInternalServerError)
 		return
 	}
 
-	// Отправляем сгенерированный HTML в браузер
-	err = tmpl.Execute(w, nil)
-	if err != nil {
-		log.Println("Ошибка рендера шаблона:", err)
-	}
+	tmpl.Execute(w, data)
 }

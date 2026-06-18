@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ .Series.Title }} | SyCinema</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="logo"><a href="/" style="color: inherit; text-decoration: none;">🍿 SyCinema</a></div>
+        <nav style="display: flex; gap: 15px; align-items: center;">
+            {{ if .Username }}
+                <a href="/bookmarks" style="color: white; text-decoration: none; margin-right: 15px;">Мои закладки</a>
+                <span style="color: #aaa;">Привет, <strong style="color: white;">{{ .Username }}</strong>!</span>
+                <form action="/logout" method="GET" style="margin: 0;">
+                    <button type="submit" class="btn-login">Выйти</button>
+                </form>
+            {{ else }}
+                <form action="/login" method="GET" style="margin: 0;">
+                    <button type="submit" class="btn-login">Войти</button>
+                </form>
+                <form action="/register" method="GET" style="margin: 0;">
+                    <button type="submit" class="btn-register">Регистрация</button>
+                </form>
+            {{ end }}
+        </nav>
+    </header>
+
+    <main style="max-width: 800px; margin: 40px auto; display: flex; gap: 30px;">
+        <img src="{{ .Series.PosterURL }}" alt="Постер" style="width: 300px; height: 450px; border-radius: 10px; object-fit: cover; background: #333;">
+        <div style="flex-grow: 1;">
+            <h1 style="margin-top: 0;">{{ .Series.Title }} ({{ .Series.ReleaseYear }})</h1>
+            
+            {{ if .Username }}
+            <form action="/bookmark/toggle" method="POST" style="margin-top: 10px; margin-bottom: 20px;">
+                <input type="hidden" name="series_id" value="{{ .Series.ID }}">
+                {{ if .IsBookmarked }}
+                    <button type="submit" style="padding: 8px 15px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer;">В закладках (Удалить)</button>
+                {{ else }}
+                    <button type="submit" style="padding: 8px 15px; background: #e50914; color: white; border: none; border-radius: 5px; cursor: pointer;">+ Добавить в закладки</button>
+                {{ end }}
+            </form>
+            {{ end }}
+
+            <p style="line-height: 1.6; color: #ccc;">{{ .Series.Description }}</p>
+            
+            <h2 style="margin-top: 40px; border-bottom: 1px solid #444; padding-bottom: 10px;">Эпизоды</h2>
+           <ul style="list-style: none; padding: 0; margin-top: 20px;">
+                {{ if .FavoritesOnly }}
+                    <div style="background: #e50914; color: white; padding: 10px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+                        Режим: Только избранные серии
+                        <br><a href="/series?id={{ .Series.ID }}" style="color: white; text-decoration: underline; font-size: 14px;">Показать все серии</a>
+                    </div>
+                {{ end }}
+
+                {{ range .Episodes }}
+                <li style="background: #222; margin-bottom: 10px; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: white; font-size: 16px;">Сезон {{ .Season }}, Серия {{ .EpisodeNum }}</strong>
+                        <span style="color: #aaa; margin-left: 10px;">{{ .Title }}</span>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        {{ if $.Username }}
+                        <form action="/episode/favorite" method="POST" style="margin: 0;">
+                            <input type="hidden" name="episode_id" value="{{ .ID }}">
+                            <input type="hidden" name="series_id" value="{{ $.Series.ID }}">
+                            <input type="hidden" name="favorites" value="{{ if $.FavoritesOnly }}true{{ else }}false{{ end }}">
+                            <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 0 10px; transition: transform 0.2s;">
+                                {{ if .IsFavorite }}❤️{{ else }}🤍{{ end }}
+                            </button>
+                        </form>
+                        {{ end }}
+                        
+                        <form action="/watch" method="GET" style="margin: 0;">
+                            <input type="hidden" name="ep" value="{{ .ID }}">
+                            <button type="submit" class="btn-register" style="padding: 8px 15px;">Смотреть</button>
+                        </form>
+                    </div>
+                </li>
+                {{ else }}
+                <p style="color: #888;">Здесь пока нет серий.</p>
+                {{ end }}
+            </ul>
+        </div>
+    </main>
+</body>
+</html>
